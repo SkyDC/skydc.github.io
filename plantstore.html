@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Plant Starts Store</title>
+    <script defer src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script defer src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script defer src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  </head>
+  <body class="bg-gray-50 p-4">
+    <div id="root"></div>
+
+    <script type="text/babel">
+      const { useState } = React;
+
+      const plants = [
+        { name: "Tomatoes", price: 5, deal: (qty) => qty >= 5 ? 4 * qty : 5 * qty, discountText: "$4 each when buying 5 or more" },
+        { name: "Potatoes by 1/2 pound", price: 9, deal: (qty) => qty >= 2 ? 7.5 * qty : 9 * qty, discountText: "$7.50 each when buying 2 or more" },
+        { name: "Strawberries", price: 5, deal: (qty) => {
+          if (qty >= 40) return 2.5 * qty;
+          if (qty >= 25) return 3 * qty;
+          if (qty >= 6) return 4 * qty;
+          return 5 * qty;
+        }, discountText: "$4 each at 6+, $3 at 25+, $2.50 at 40+" },
+        { name: "Peppers", price: 5 },
+        { name: "Yacon", price: 10 },
+        { name: "Artichoke", price: 5 },
+        { name: "Cucumber", price: 4 },
+        { name: "Squash & Zucchini", price: 4 },
+        { name: "Sweet Potatoes", price: 5 },
+        { name: "African Basil", price: 8 },
+        { name: "Holy Basil", price: 10 },
+        { name: "Malibu Compost", price: 20 }
+      ];
+
+      function PlantStoreApp() {
+        const [quantities, setQuantities] = useState({});
+        const [clearedOrders, setClearedOrders] = useState([]);
+
+        const updateQty = (name, change) => {
+          setQuantities(prev => ({ ...prev, [name]: Math.max(0, (prev[name] || 0) + change) }));
+        };
+
+        const handleManualQtyChange = (name, value) => {
+          const intValue = parseInt(value);
+          if (!isNaN(intValue) && intValue >= 0) {
+            setQuantities(prev => ({ ...prev, [name]: intValue }));
+          }
+        };
+
+        const clearAll = () => {
+          setClearedOrders(prev => [...prev, quantities]);
+          setQuantities({});
+        };
+
+        const getTotal = (order = quantities) => {
+          return plants.reduce((sum, plant) => {
+            const qty = order[plant.name] || 0;
+            const total = plant.deal ? plant.deal(qty) : plant.price * qty;
+            return sum + total;
+          }, 0);
+        };
+
+        const getItemizedList = (order = quantities) => {
+          return plants
+            .filter(plant => (order[plant.name] || 0) > 0)
+            .map(plant => {
+              const qty = order[plant.name];
+              const cost = plant.deal ? plant.deal(qty) : plant.price * qty;
+              return (
+                <div key={plant.name + cost} className="flex justify-between gap-4 justify-end text-right">
+                  <span className="text-right w-2/3 sm:w-auto">{plant.name} x{qty}</span>
+                  <span className="text-right w-1/3 sm:w-auto">${cost.toFixed(2)}</span>
+                </div>
+              );
+            });
+        };
+
+        return (
+          <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {plants.map((plant) => (
+                <div key={plant.name} className="bg-white p-4 rounded shadow flex flex-col justify-between text-center">
+                  <div>
+                    <div className="text-lg font-bold">{plant.name} -<span className="text-base font-normal">(${plant.price})</span></div>
+                    {plant.discountText && <div className="text-sm text-gray-600 italic mt-1">{plant.discountText}</div>}
+                  </div>
+                  <div className="flex items-center justify-center gap-2 mt-4">
+                    <button className="bg-gray-300 text-black px-2 py-1 rounded-full" onClick={() => updateQty(plant.name, -5)}>-5</button>
+                    <button className="bg-gray-300 text-black px-2 py-1 rounded-full" onClick={() => updateQty(plant.name, -1)}>-1</button>
+                    <input type="number" min="0" value={quantities[plant.name] || 0} onChange={(e) => handleManualQtyChange(plant.name, e.target.value)} className="w-14 text-center border rounded p-1" />
+                    <button className="bg-green-700 text-white px-2 py-1 rounded-full" onClick={() => updateQty(plant.name, 1)}>+1</button>
+                    <button className="bg-green-700 text-white px-2 py-1 rounded-full" onClick={() => updateQty(plant.name, 5)}>+5</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="sticky top-4 h-fit md:col-span-1 border-l pl-4">
+              <h2 className="text-xl font-bold mb-2 text-right">Order Summary:</h2>
+              <div className="space-y-1 text-right">
+                {getItemizedList()}
+              </div>
+              <div className="text-2xl font-bold text-right mt-4">Total: ${getTotal().toFixed(2)}</div>
+              <div className="text-right mt-2">
+                <button className="bg-red-600 text-white px-4 py-1 rounded-full" onClick={clearAll}>Clear All</button>
+              </div>
+              {clearedOrders.length > 0 && (
+                <div className="mt-6 text-right">
+                  <h3 className="text-lg font-semibold mb-2">Previous Orders:</h3>
+                  {clearedOrders.map((order, index) => (
+                    <div key={index} className="border-t pt-2 mt-2 space-y-1">
+                      {getItemizedList(order)}
+                      <div className="font-bold mt-1">Total: ${getTotal(order).toFixed(2)}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      }
+
+      ReactDOM.createRoot(document.getElementById("root")).render(<PlantStoreApp />);
+    </script>
+  </body>
+</html>
